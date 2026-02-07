@@ -1,0 +1,45 @@
+name: Build Qt Windows EXE
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Qt 6 (mingw kit is easiest for static-ish packaging with windeployqt)
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: "6.6.3"
+          arch: "win64_mingw"
+          cache: true
+
+      - name: Configure (CMake)
+        shell: bash
+        run: |
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        shell: bash
+        run: |
+          cmake --build build --config Release -j 2
+
+      # Collect exe + Qt dlls/plugins into a folder using windeployqt
+      - name: Package (windeployqt)
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp build/WhereIsByLabelQt.exe dist/ || cp build/Release/WhereIsByLabelQt.exe dist/
+          windeployqt dist/WhereIsByLabelQt.exe
+          powershell -Command "Compress-Archive -Path dist\\* -DestinationPath WhereIsByLabelQt_Windows.zip"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WhereIsByLabelQt_Windows
+          path: WhereIsByLabelQt_Windows.zip
