@@ -1,4 +1,4 @@
-name: Build Qt Windows EXE
+name: Build Qt Windows EXE (MSVC)
 
 on:
   push:
@@ -11,32 +11,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Install Qt 6 (mingw kit is easiest for static-ish packaging with windeployqt)
-      - name: Install Qt
+      - name: Install Qt (MSVC)
         uses: jurplel/install-qt-action@v4
         with:
           version: "6.6.3"
-          arch: "win64_mingw"
+          arch: "win64_msvc2019_64"
           cache: true
 
       - name: Configure (CMake)
-        shell: bash
-        run: |
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G "Visual Studio 17 2022"
 
-      - name: Build
-        shell: bash
-        run: |
-          cmake --build build --config Release -j 2
+      - name: Build (Release)
+        run: cmake --build build --config Release
 
-      # Collect exe + Qt dlls/plugins into a folder using windeployqt
       - name: Package (windeployqt)
-        shell: bash
         run: |
-          mkdir -p dist
-          cp build/WhereIsByLabelQt.exe dist/ || cp build/Release/WhereIsByLabelQt.exe dist/
-          windeployqt dist/WhereIsByLabelQt.exe
-          powershell -Command "Compress-Archive -Path dist\\* -DestinationPath WhereIsByLabelQt_Windows.zip"
+          mkdir dist
+          copy build\Release\WhereIsByLabelQt.exe dist\
+          windeployqt dist\WhereIsByLabelQt.exe
+          powershell -Command "Compress-Archive -Path dist\* -DestinationPath WhereIsByLabelQt_Windows.zip"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
